@@ -23,7 +23,8 @@ Ny = 10;
 % Visualize system
 
 contourf(Mass_matrix);
-disp(Temperature_vector);
+disp(Temperature_vector');
+disp(gridx')
 
 end
 
@@ -37,15 +38,16 @@ function [gridx,gridy] = generate_grid(L,H,Nx,Ny)
     % ?Verify that this is a good choice of grid (add L/(2Nx)?)
     % ?Make nonlinear grid
     
+    cell_lengthx = L/Nx;
+    cell_lengthy = H/Ny;
+    
+    
     %Center positions
-    centerx=linspace(0,L,Nx)';
-    centery=linspace(0,H,Ny)';
+    centerx=linspace(cell_lengthx/2,L-cell_lengthx/2,Nx)';
+    centery=linspace(cell_lengthy/2,H-cell_lengthy/2,Ny)';
     % Cell sizes
-    % This ONLY works with uniform grid
-    cell_sizex=centerx(2)-centerx(1);
-    cell_sizey=centery(2)-centery(1);
-    lengthx=ones(Nx,1)*L/Nx;
-    lengthy=ones(Ny,1)*H/Ny;
+    lengthx=ones(Nx,1)*cell_lengthx;
+    lengthy=ones(Ny,1)*cell_lengthy;
     % Final grids
     gridx=[centerx,lengthx];
     gridy=[centery,lengthy];
