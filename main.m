@@ -2,11 +2,12 @@
 
 function main()
 % User parameters
+plot_on = 1;
 
 L = 1.0;
 H = 0.5;
-Nx = 10;
-Ny = 10;
+Nx = 100;
+Ny = 100;
 
 % Define system
     % Initialize grid
@@ -17,14 +18,17 @@ Ny = 10;
     Mass_matrix = rand(Nx*Ny);
     
     % Make initial guess
-    Temperature_vector = ones(Nx*Ny,1);
+    Temperature_vector = rand(Nx*Ny,1);
 % Solve system
 
 % Visualize system
+if plot_on == 1
+    subplot(1,2,1)
+    imagesc(Mass_matrix);
+    subplot(1,2,2)
+    plot_field_1d(Temperature_vector,Nx,Ny)
+end
 
-contourf(Mass_matrix);
-disp(Temperature_vector');
-disp(gridx')
 
 end
 
@@ -103,4 +107,42 @@ function [length]=delta(cell_x,cell_y,compass1,compass2,gridx,gridy)
     length=sqrt(dx.^2+dy.^2);
 end
 
+% Assembly functions
 
+function [i]=index_1d(x,y,Nx,~)
+% [i]=index_1d(x,y,Nx,~)
+    % Get the 1D-index from the x- and y-index
+%     assert(isinteger(x))
+%     assert(isinteger(y))
+%     assert(isinteger(Nx))
+    i=(y-1)*Nx+x;
+end
+
+function [x,y]=index_2d(i,Nx,~)
+% [x,y]=index_2d(i,Nx,~)
+    % Get the 2D-index from the i-index.
+%     assert(isinteger(i))
+%     assert(isinteger(Nx))
+%     
+    x=mod(i,Nx);
+    if x==0
+        x=Nx;
+    end
+    y=(i-x)/Nx+1;
+end
+
+% Plotting functions
+
+function [map]=field_2_2d(field,Nx,Ny)
+    assert(length(field)==Nx*Ny);
+    map=zeros(Nx,Ny);
+    for i = 1:length(field)
+       [x,y]=index_2d(i,Nx);
+       map(x,y)=field(i);
+    end
+end
+
+function plot_field_1d(field,Nx,Ny)
+    map = field_2_2d(field,Nx,Ny);
+    imagesc(map)
+end
