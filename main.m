@@ -1,23 +1,55 @@
 % MAIN FUNCTION
 
 function main()
+% User parameters
+
+L = 1.0;
+H = 0.5;
+Nx = 10;
+Ny = 10;
 
 % Define system
     % Initialize grid
+    [gridx,gridy]=generate_grid(L,H,Nx,Ny);
     
+    delta(3,3,'N','P',gridx,gridy)
     % Build mass matrix
+    Mass_matrix = rand(Nx*Ny);
     
     % Make initial guess
-
+    Temperature_vector = ones(Nx*Ny,1);
 % Solve system
 
 % Visualize system
+
+contourf(Mass_matrix);
+disp(Temperature_vector);
 
 end
 
 
 % Grid functions
-function [gridx,gridy] = generate_grid(L,H)
+function [gridx,gridy] = generate_grid(L,H,Nx,Ny)
+%[gridx,gridy] = generate_grid(L,H)
+    % GENERATE A GRID
+    % TODO:
+    % This is probably VERY buggy!
+    % ?Verify that this is a good choice of grid (add L/(2Nx)?)
+    % ?Make nonlinear grid
+    
+    %Center positions
+    centerx=linspace(0,L,Nx)';
+    centery=linspace(0,H,Ny)';
+    % Cell sizes
+    % This ONLY works with uniform grid
+    cell_sizex=centerx(2)-centerx(1);
+    cell_sizey=centery(2)-centery(1);
+    lengthx=ones(Nx,1)*L/Nx;
+    lengthy=ones(Ny,1)*H/Ny;
+    % Final grids
+    gridx=[centerx,lengthx];
+    gridy=[centery,lengthy];
+end
 
 function [x,y]= position(cell_x,cell_y,compass,gridx,gridy)
 % [x,y]=POSITION(cell,compass,gridx,gridy)
@@ -61,6 +93,12 @@ function [x,y]= position(cell_x,cell_y,compass,gridx,gridy)
     end
 end
 
-
+function [length]=delta(cell_x,cell_y,compass1,compass2,gridx,gridy)
+    [x1,y1] = position(cell_x,cell_y,compass1,gridx,gridy);
+    [x2,y2] = position(cell_x,cell_y,compass2,gridx,gridy);
+    dx=x1-x2;
+    dy=y1-y2;
+    length=sqrt(dx.^2+dy.^2);
+end
 
 
