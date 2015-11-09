@@ -1,26 +1,60 @@
-% MAIN FUNCTION
+%% MAIN FUNCTION
 
 function main()
+
 % User parameters
 plot_on = 1;
+max_iterations = 1000;
 
 L = 1.0;
 H = 0.5;
-Nx = 100;
-Ny = 100;
+Nx = 3;
+Ny = 3;
+
+
 
 % Define system
-    % Initialize grid
-    [gridx,gridy]=generate_grid(L,H,Nx,Ny);
-    
-    delta(3,3,'N','P',gridx,gridy)
-    % Build mass matrix
-    Mass_matrix = rand(Nx*Ny);
-    
-    % Make initial guess
-    Temperature_vector = rand(Nx*Ny,1);
-% Solve system
 
+% Make initial guess
+Temperature_vector = rand(Nx*Ny,1);  
+
+% Initialize grid
+[gridx,gridy]=generate_grid(L,H,Nx,Ny);
+
+delta(3,3,'N','P',gridx,gridy)
+
+% Build load vector
+load_vector=zeros(Nx*Ny,1);
+
+% Build mass matrix
+Mass_matrix = zeros(Nx*Ny);
+
+for i = 1:Nx*Ny
+    % Setting mass matrix
+    Mass_matrix(i,i)=a_P(i);
+    if i <= Nx*(Ny-1) %Not North edge 
+        Mass_matrix(i,i+Nx)=a_N(i);
+    end
+
+    if mod(i,Nx)~= 0 %Not East edge
+        Mass_matrix(i,i+1)=a_E(i);
+    end
+
+    if mod(i,Nx)~= 1 %Not West edge
+        Mass_matrix(i,i-1)=a_W(i);
+    end        
+
+    if i > Nx %Not South edge 
+        Mass_matrix(i,i-Nx)=a_S();
+    end           
+end
+    
+
+% Solve system
+%    Temperature_vector=Mass_matrix\Source_vector; % This is not allowed...
+for step = 1:max_iterations;
+    Temperature_vector=Gauss_Siedel_Step(Mass_matrix,load_vector,Temperature_vector);
+end
 % Visualize system
 if plot_on == 1
     subplot(1,2,1)
@@ -33,13 +67,12 @@ end
 end
 
 
-% Grid functions
+%% Grid functions
 function [gridx,gridy] = generate_grid(L,H,Nx,Ny)
 %[gridx,gridy] = generate_grid(L,H)
     % GENERATE A GRID
     % TODO:
     % This is probably VERY buggy!
-    % ?Verify that this is a good choice of grid (add L/(2Nx)?)
     % ?Make nonlinear grid
     
     cell_lengthx = L/Nx;
@@ -107,7 +140,7 @@ function [length]=delta(cell_x,cell_y,compass1,compass2,gridx,gridy)
     length=sqrt(dx.^2+dy.^2);
 end
 
-% Assembly functions
+%% Assembly functions
 
 function [i]=index_1d(x,y,Nx,~)
 % [i]=index_1d(x,y,Nx,~)
@@ -131,7 +164,73 @@ function [x,y]=index_2d(i,Nx,~)
     y=(i-x)/Nx+1;
 end
 
-% Plotting functions
+function [a]=a_P(i)
+
+a=1;
+end
+
+function [a]=a_N(i)
+
+a=1;
+end
+
+function [a]=a_E(i)
+
+a=1;
+end
+
+function [a]=a_S(i)
+
+a=1;
+end
+
+function [a]=a_W(i)
+
+a=1;
+end
+
+function [b]=b_bulk(i)
+
+b=1;
+end
+
+function [b]=b_N(i)
+
+b=1;
+end
+
+function [b]=b_E(i)
+
+b=1;
+end
+
+function [b]=b_S(i)
+
+b=1;
+end
+
+function [b]=b_W(i)
+
+b=1;
+end
+
+%% Gauss-Siedel solver
+
+function [T]=Gauss_Siedel_Step(A,b,T)
+    assert(length(b)==length(T))
+    N=length(b);
+    for i = 1:N
+        sigma=0;
+        for j= 1:N
+            if j~=i
+                sigma = sigma + A(i,j).*T(j);
+            end
+        end
+        T(i)=1./A(i,i).*(b(i)-sigma);
+    end
+end
+
+%% Plotting functions
 
 function [map]=field_2_2d(field,Nx,Ny)
     assert(length(field)==Nx*Ny);
