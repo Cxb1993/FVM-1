@@ -2,25 +2,20 @@
 
 
 function main()
-
-
-pause
-
 % User parameters
-plot_on = 1;
-%Switch for plotting
+plot_on = 1;            %Switch for plotting
 
-max_iterations = 100;  %Number of iterations, int
+max_iterations = 1000;  %Number of iterations, int
 
 L = 1.0;                %Length, float
 H = 0.5;                %Height, float
-Nx = 3;                 %Gridsize x, int
-Ny = 3;                 %Gridsize y, int
+Nx = 30;                 %Gridsize x, int
+Ny = 30;                 %Gridsize y, int
 
 Sp = -2;                % Source term: Tp(a_p-Sp/Tp)
 Sb = 0;                 % Source term 
 
-k=@(x,y) 5*(1+x/L*100); %Thermal conductivity, function handle
+k=@(r) 5*(1+r(1)/L*100); %Thermal conductivity, function handle
 
 % Define system
 
@@ -30,20 +25,19 @@ Temperature_vector = rand(Nx*Ny,1);
 [gridx,gridy]=generate_grid(L,H,Nx,Ny);
 % Build load vector
 load_vector=zeros(Nx*Ny,1);
-load_vector(1)=10;
-load_vector(4)=10;
-load_vector(7)=10;
-
+load_vector(index_1d(round(Nx/2),round(Ny/2),Nx,Ny)) = 10;
 % Build mass matrix
 Mass_matrix = zeros(Nx*Ny);
 Mass_matrix = Assemble_matrix(Mass_matrix,Temperature_vector,Nx,Ny);
 Test_stability(Mass_matrix)
 % Solve system
-disp(Mass_matrix\load_vector)
 for step = 1:max_iterations;
     Temperature_vector=Gauss_Siedel_Step(Mass_matrix,load_vector,Temperature_vector);
 end
-disp(Temperature_vector)
+
+disp('Error: ')
+disp(sum(abs(Mass_matrix\load_vector))-sum(abs(Temperature_vector)))
+
 % Visualize system
 
 if plot_on == 1
@@ -176,54 +170,13 @@ function [x,y]=index_2d(i,Nx,~)
     y=(i-x)/Nx+1;
 end
 
-function [a]=a_P(i)
-
-a=4;
-end
-
-function [a]=a_N(i)
-
-a=1;
-end
-
-function [a]=a_E(i)
-
-a=1;
-end
-
-function [a]=a_S(i)
-
-a=1;
-end
-
-function [a]=a_W(i)
-
-a=1;
-end
-
-function [b]=b_bulk(i)
-
-b=1;
-end
-
-function [b]=b_N(i)
-
-b=1;
-end
-
-function [b]=b_E(i)
-
-b=1;
-end
-
-function [b]=b_S(i)
-
-b=1;
-end
-
-function [b]=b_W(i)
-
-b=1;
+function [ap,an,ae,as,aw]=coeff_a(i,gridx,gridy)
+    [a,b]=index_2d(i,length(gridx(:,1)));
+    aw=k(position(a,b,'w',gridx,gridy));
+    an=k(position(a,b,'w',gridx,gridy));
+    ae=k(position(a,b,'w',gridx,gridy));
+    as=k(position(a,b,'w',gridx,gridy));
+    a=k(position(a,b,'w',gridx,gridy));
 end
 
 %% Gauss-Siedel solver
@@ -277,5 +230,5 @@ end
 
 function plot_field_1d(field,Nx,Ny)
     map = field_2_2d(field,Nx,Ny);
-    imagesc(map)
+    image(map)
 end
