@@ -1,61 +1,51 @@
 %% MAIN FUNCTION
 
+
 function main()
+
+
+pause
 
 % User parameters
 plot_on = 1;
-max_iterations = 1000;
+%Switch for plotting
 
-L = 1.0;
-H = 0.5;
-Nx = 3;
-Ny = 3;
+max_iterations = 100;  %Number of iterations, int
 
+L = 1.0;                %Length, float
+H = 0.5;                %Height, float
+Nx = 3;                 %Gridsize x, int
+Ny = 3;                 %Gridsize y, int
 
+Sp = -2;                % Source term: Tp(a_p-Sp/Tp)
+Sb = 0;                 % Source term 
+
+k=@(x,y) 5*(1+x/L*100); %Thermal conductivity, function handle
 
 % Define system
 
 % Make initial guess
 Temperature_vector = rand(Nx*Ny,1);  
-
 % Initialize grid
 [gridx,gridy]=generate_grid(L,H,Nx,Ny);
-
-delta(3,3,'N','P',gridx,gridy)
-
 % Build load vector
 load_vector=zeros(Nx*Ny,1);
+load_vector(1)=10;
+load_vector(4)=10;
+load_vector(7)=10;
 
 % Build mass matrix
 Mass_matrix = zeros(Nx*Ny);
-
-for i = 1:Nx*Ny
-    % Setting mass matrix
-    Mass_matrix(i,i)=a_P(i);
-    if i <= Nx*(Ny-1) %Not North edge 
-        Mass_matrix(i,i+Nx)=a_N(i);
-    end
-
-    if mod(i,Nx)~= 0 %Not East edge
-        Mass_matrix(i,i+1)=a_E(i);
-    end
-
-    if mod(i,Nx)~= 1 %Not West edge
-        Mass_matrix(i,i-1)=a_W(i);
-    end        
-
-    if i > Nx %Not South edge 
-        Mass_matrix(i,i-Nx)=a_S();
-    end           
-end
-    
-
+Mass_matrix = Assemble_matrix(Mass_matrix,Temperature_vector,Nx,Ny);
+Test_stability(Mass_matrix)
 % Solve system
-%    Temperature_vector=Mass_matrix\Source_vector; % This is not allowed...
+disp(Mass_matrix\load_vector)
 for step = 1:max_iterations;
     Temperature_vector=Gauss_Siedel_Step(Mass_matrix,load_vector,Temperature_vector);
 end
+disp(Temperature_vector)
 % Visualize system
+
 if plot_on == 1
     subplot(1,2,1)
     imagesc(Mass_matrix);
@@ -142,6 +132,28 @@ end
 
 %% Assembly functions
 
+function [M]=Assemble_matrix(M,T,Nx,Ny)
+for i = 1:Nx*Ny
+    % Setting mass matrix
+    M(i,i)=a_P(i);
+    if i <= Nx*(Ny-1) %Not North edge
+        M(i,i+Nx)=a_N(i);
+    end
+    
+    if mod(i,Nx)~= 0 %Not East edge
+        M(i,i+1)=a_E(i);
+    end
+    
+    if mod(i,Nx)~= 1 %Not West edge
+        M(i,i-1)=a_W(i);
+    end
+    
+    if i > Nx %Not South edge
+        M(i,i-Nx)=a_S();
+    end
+end
+end
+
 function [i]=index_1d(x,y,Nx,~)
 % [i]=index_1d(x,y,Nx,~)
     % Get the 1D-index from the x- and y-index
@@ -166,7 +178,7 @@ end
 
 function [a]=a_P(i)
 
-a=1;
+a=4;
 end
 
 function [a]=a_N(i)
@@ -230,6 +242,28 @@ function [T]=Gauss_Siedel_Step(A,b,T)
     end
 end
 
+function Test_stability(M)
+    %Test if positive definite
+    V=eig(M);
+    positive_definite=1;
+    for i = 1:length(V)
+        if V(i)<0
+            positive_definite=0;
+        end
+    end
+    %Test if diagonally dominant
+    [r,~]=size(M);
+    diagonally_dominant=1;
+    for i= 1:r
+        Msum=sum(abs(M(i,:)));
+        if abs(M(i,i))<=Msum-abs(M(i,i))
+            diagonally_dominant=0;
+        end
+    end
+    if positive_definite==0 && diagonally_dominant==0
+       warning('Matrix is neither positive definite nor diagonally dominant') 
+    end
+end
 %% Plotting functions
 
 function [map]=field_2_2d(field,Nx,Ny)
