@@ -2,41 +2,44 @@
 
 
 function main()
+global Sp Sb L H Nx Ny  % Commonly used variables global
 % User parameters
 plot_on = 1;            %Switch for plotting
+terminal_on = 1;        %Switch for term-output
 
 max_iterations = 1000;  %Number of iterations, int
 
 L = 1.0;                %Length, float
 H = 0.5;                %Height, float
-Nx = 30;                 %Gridsize x, int
-Ny = 30;                 %Gridsize y, int
+Nx = 3;                 %Gridsize x, int
+Ny = 3;                 %Gridsize y, int
 
 Sp = -2;                % Source term: Tp(a_p-Sp/Tp)
 Sb = 0;                 % Source term 
 
-k=@(r) 5*(1+r(1)/L*100); %Thermal conductivity, function handle
+BC_types = ['d','d','d','d'];
+BC_values= [1,]
 
 % Define system
 
 % Make initial guess
-Temperature_vector = rand(Nx*Ny,1);  
+Temperature_vector = ones(Nx*Ny,1);  
 % Initialize grid
 [gridx,gridy]=generate_grid(L,H,Nx,Ny);
 % Build load vector
 load_vector=zeros(Nx*Ny,1);
-load_vector(index_1d(round(Nx/2),round(Ny/2),Nx,Ny)) = 10;
+load_vector(round(Nx/2),round(Ny/2))=10;
 % Build mass matrix
 Mass_matrix = zeros(Nx*Ny);
-Mass_matrix = Assemble_matrix(Mass_matrix,Temperature_vector,Nx,Ny);
+Mass_matrix = Assemble_matrix(Mass_matrix,Temperature_vector,gridx,gridy);
+disp(Mass_matrix)
+
 Test_stability(Mass_matrix)
 % Solve system
 for step = 1:max_iterations;
     Temperature_vector=Gauss_Siedel_Step(Mass_matrix,load_vector,Temperature_vector);
+    Mass_matrix=Assemble_matrix(Mass_matrix,Temperature_vector,gridx,gridy);
 end
-
-disp('Error: ')
-disp(sum(abs(Mass_matrix\load_vector))-sum(abs(Temperature_vector)))
 
 % Visualize system
 
@@ -46,7 +49,14 @@ if plot_on == 1
     subplot(1,2,2)
     plot_field_1d(Temperature_vector,Nx,Ny)
 end
+if terminal_on == 1
+    disp(Mass_matrix)
+    disp(Temperature_vector)
+    disp('Error: ')
+    disp(sum(abs(Mass_matrix\load_vector))-sum(abs(Temperature_vector)))
 
+end
+warning('b is off, k is constant')
 
 end
 
@@ -126,25 +136,30 @@ end
 
 %% Assembly functions
 
-function [M]=Assemble_matrix(M,T,Nx,Ny)
+function [M]=Assemble_matrix(M,T,gridx,gridy)
+    global Nx Ny L
 for i = 1:Nx*Ny
+    
+    [xindex,yindex]=index_2d(i,Nx,Ny);
+    [ap,an,ae,as,aw]=coeff_a(i,gridx,gridy,L);
+    dx=gridx(xindex,2);
+    dy=gridy(yindex,2);
     % Setting mass matrix
-    [ap,an,ae,as,aw]=coeff_a(i,gridx,gridy)
-    M(i,i)=a_P(i);
+    M(i,i)=ap-dx*dy*bp(T(i));
     if i <= Nx*(Ny-1) %Not North edge
-        M(i,i+Nx)=a_N(i);
+        M(i,i+Nx)=an;
     end
     
     if mod(i,Nx)~= 0 %Not East edge
-        M(i,i+1)=a_E(i);
+        M(i,i+1)=ae;
     end
     
     if mod(i,Nx)~= 1 %Not West edge
-        M(i,i-1)=a_W(i);
+        M(i,i-1)=aw;
     end
     
     if i > Nx %Not South edge
-        M(i,i-Nx)=a_S();
+        M(i,i-Nx)=as;
     end
 end
 end
@@ -171,14 +186,15 @@ function [x,y]=index_2d(i,Nx,~)
     y=(i-x)/Nx+1;
 end
 
-function [ap,an,ae,as,aw]=coeff_a(i,gridx,gridy)
+function [ap,an,ae,as,aw]=coeff_a(i,gridx,gridy,L)
     [a,b]=index_2d(i,length(gridx(:,1)));
-    aw=k(position(a,b,'w',gridx,gridy));
-    an=k(position(a,b,'w',gridx,gridy));
-    ae=k(position(a,b,'w',gridx,gridy));
-    as=k(position(a,b,'w',gridx,gridy));
-    ap=aw+an+ae+as;
+    aw=-k(position(a,b,'w',gridx,gridy));
+    an=-k(position(a,b,'n',gridx,gridy));
+    ae=-k(position(a,b,'e',gridx,gridy));
+    as=-k(position(a,b,'s',gridx,gridy));
+    ap=-(aw+an+ae+as);
 end
+
 
 %% Gauss-Siedel solver
 
@@ -232,4 +248,16 @@ end
 function plot_field_1d(field,Nx,Ny)
     map = field_2_2d(field,Nx,Ny);
     image(map)
+end
+
+function [out]=bp(T)
+    global Sp
+    %out = Sp/T; % Source term functional
+    out = 0;
+end
+
+function [out]=k(r)
+    global L
+	%out = 5*(1+r(1)/L*100); %Thermal conductivity, function handle
+    out = L;
 end
