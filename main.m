@@ -13,8 +13,8 @@ max_iterations = 1000;  %Number of iterations, int
 
 L = 1.0;                %Length, float
 H = 0.5;                %Height, float
-Nx = 3;                 %Gridsize x, int
-Ny = 3;                 %Gridsize y, int
+Nx = 10;                 %Gridsize x, int
+Ny = 10;                 %Gridsize y, int
 
 Sp = -2;                % Source term: Tp(a_p-Sp/Tp)
 Sb = 0;                 % Source term 
@@ -30,7 +30,7 @@ Temperature_vector = ones(Nx*Ny,1);
 [gridx,gridy]=generate_grid(L,H,Nx,Ny);
 % Build load vector
 load_vector=zeros(Nx*Ny,1);
-load_vector(round(Nx/2+Nx),1)=100;
+load_vector(round(Nx/2+round(Ny/2)*Nx),1)=100;
 % Build mass matrix
 Mass_matrix = zeros(Nx*Ny);
 Mass_matrix = Assemble_matrix(Mass_matrix,Temperature_vector,gridx,gridy);
@@ -147,19 +147,19 @@ for i = 1:Nx*Ny
     dy=gridy(yindex,2);
     % Setting mass matrix
     M(i,i)=ap-dx*dy*bp(T(i));
-    if i <= Nx*(Ny-1) %Not North edge
+    if an ~= 0 %Not North edge
         M(i,i+Nx)=an;
     end
     
-    if mod(i,Nx)~= 0 %Not East edge
+    if ae ~= 0 %Not East edge
         M(i,i+1)=ae;
     end
     
-    if mod(i,Nx)~= 1 %Not West edge
+    if aw ~= 0 %Not West edge
         M(i,i-1)=aw;
     end
     
-    if i > Nx %Not South edge
+    if as ~= 0 %Not South edge
         M(i,i-Nx)=as;
     end
 end
@@ -188,19 +188,36 @@ function [x,y]=index_2d(i,Nx,~)
 end
 
 function [ap,an,ae,as,aw]=coeff_a(i,gridx,gridy)
+global Nx Ny
     [a,b]=index_2d(i,length(gridx(:,1))); % [x index, y index]
     
-    an=-k(position(a,b,'n',gridx,gridy)); %-kn    
-    ae=-k(position(a,b,'e',gridx,gridy)); %-ke  
-    as=-k(position(a,b,'s',gridx,gridy)); %-ks      
-    aw=-k(position(a,b,'w',gridx,gridy)); %-kw
-
+    %Calculate the coefficients
+    an=-k(position(a,b,'n',gridx,gridy)); %-kn
     an=an*gridy(b,2)/delta(a,b,'W','P',gridx,gridy); % -kn*dx/?y
+    ae=-k(position(a,b,'e',gridx,gridy)); %-ke
     ae=ae*gridy(b,2)/delta(a,b,'W','P',gridx,gridy); % -ke*dy/?x
+    as=-k(position(a,b,'s',gridx,gridy)); %-ks
     as=as*gridy(b,2)/delta(a,b,'W','P',gridx,gridy); % -ks*dx/?y
-    aw=aw*gridy(b,2)/delta(a,b,'W','P',gridx,gridy); % -kw*dy/?x    
-    
+    aw=-k(position(a,b,'w',gridx,gridy)); %-kw
+    aw=aw*gridy(b,2)/delta(a,b,'W','P',gridx,gridy); % -kw*dy/?x
     ap=-(aw+an+ae+as);
+    %Remove T-dependence for boundaries
+    % NORTH
+    if i > Nx*(Ny-1)    % North edge   
+        an=0;
+    end
+    % EAST
+    if mod(i,Nx)== 0 %Not East edge
+        ae=0;
+    end
+    %SOUTH
+    if i <= Nx %Not South edge
+        as=0;
+    end       
+    %WEST
+    if mod(i,Nx)== 1 %Not West edge        
+        aw=0;
+    end
 end
 
 
@@ -266,6 +283,6 @@ end
 
 function [out]=k(r)
     global L
-	out = 5*(1+r(1)/L*100); %Thermal conductivity, function handle
-    %out = L;
+	%out = 5*(1+r(1)/L*100); %Thermal conductivity, function handle
+    out = L;
 end
